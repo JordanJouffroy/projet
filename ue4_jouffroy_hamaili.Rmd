@@ -12,7 +12,7 @@ runtime: shiny
 
 # Importation des librairies
 
-Avant de commencer à créer l'entrepot de données, nous importons toutes les libraries (sauf DCluster car elle écrase la fonction select de dplyr) afin d'avoir un visuel conci de celle ci ?
+Avant de commencer à créer l'entrepot de données, nous importons toutes les libraries (sauf DCluster car elle écrase la fonction select de dplyr) afin d'avoir un visuel conci de celle ci.
 
 ```{r library, include = FALSE}
 
@@ -763,11 +763,12 @@ shinyApp(
           Nom_Etablissement,
           Adresse,
           Code_Postal, Commune, longitude, latitude
-        ) %>% 
+        ) %>% mutate(Polluant = ifelse(quantite == max(quantite), Polluant_Dechet, NA)) %>% 
         summarise(
           Nombre_polluant = n(),
           Maximum = max(quantite),
-          Unite = first(Unite)
+          Unite = first(Unite), 
+          Polluant = max(Polluant)
         )
       
       
@@ -793,6 +794,7 @@ shinyApp(
             map_pol_data()[[1]]$Adresse, "<br/>", 
             map_pol_data()[[1]]$Code_Postal, " ",map_pol_data()[[1]]$Commune, "<br/>", 
             input$type, " : ", map_pol_data()[[1]]$Nombre_polluant, "<br/>",
+            "Polluant principal : ", map_pol_data()[[1]]$Polluant, "<br/>",
             "Maximum : ", map_pol_data()[[1]]$Maximum, " ",map_pol_data()[[1]]$Unite
           ), 
           label = map_pol_data()[[1]]$Nom_Etablissement,
@@ -1022,10 +1024,21 @@ id_pol_list[[i]] <- data.frame(Polluant = id_pol[i], t0 = st_test[1], P_value = 
 
 df_id_pol <- data.table::rbindlist(id_pol_list)
 
-df_id_pol %>% arrange(t0) %>% 
-kable(caption = "Tableau recapitulatif des résultat de test de Stone")
+pp <- polluant_et_pesticide %>% dplyr::select(Id_Polluant, Nom_Polluant = Polluant_Dechet) 
+
 ```
 
+```{r resultat, echo=FALSE, fig.align='center', warning=FALSE}
+
+df_id_pol %>% arrange(t0) %>% 
+  slice(1:10) %>% 
+  left_join(pp, by = c("Polluant" = "Id_Polluant")) %>% 
+  unique() %>% dplyr::select(Polluant, Nom_Polluant, everything()) %>% 
+  kable(
+    caption = "Tableau recapitulatif des résultat de test de Stone",
+    align = "c", row.names = FALSE
+  )
+```
 
 
 Ainsi on peut voir que hormis pour P042, P043 et P044 il y a une correlation entre l'emission de polluant et l'incidence de la maladie au sein de la population de France Metropolitaine. il aurait été préférable de regarder la pvalue après correction de bonferroni, et donc en prenant une p value < 0.05/99 soit presque 0.0005
