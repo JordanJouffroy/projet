@@ -676,12 +676,15 @@ milieu <- unique(polluant_et_pesticide$Milieu) %>% sort
 
 
 
-Il est possible de selection la region à gauche, l'année et le type de polluant/pesticide
+Il est possible de selectionner la region à gauche, l'année et le type de polluant/pesticide. les polluant proposé sont filtré en fonction des 3 premiers menus. 
+
+
 
 ```{r shiny, echo=FALSE}
 shinyApp(
   
   ui <- fluidPage(
+    titlePanel("Repartition des établissements emmeteurs de polluant, producteur ou traiteur de dechet ou de mesure de pesticide"), 
     fluidRow(
       column(3,
              selectInput("annee", h5("Quelle Annee ?"), 
