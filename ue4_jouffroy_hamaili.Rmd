@@ -335,8 +335,8 @@ Ici un problème s'est posé à nous : ce n'est pas en soit le fait d'avoir 2 so
 
 En effet, si le système de coordonnées pour la base de données des pesticides etaient en Lambert 93 et donc simple à compilé pour la reprséntation géographique, celui des polluants n'étaient pas référencé clairement d'une part, mais différait selon la région et contenait une erreur. Concernant l'erreur, il s'agit de l'établissement avec l'Identifiant 589.00648 en 2017 et 89288528 avant. J'ai pu corriger cette erreur en regardant que dans le document registre des etablissement, la longitude et la latitude étaient des combinaison linéaires des coordonnées x et y. Donc pour cette établissement et ceux de Mayotte, à partir de leur Coordonnées X et Y, j'ai pu retrouver la longitude et la latitude. J'ai utilisé le même raisonnement après avoir testé les projections usuelles pour les DROM avec sp. Pour cela j'ai recherché les coordonnées en WGS84 de quelques établissement pour chaque DROM et j'ai fait un modèle de regression linéaire en fonction de Coordonnees_X et Coordonnees_Y. Cela a une imprecision de quelques kilomètres mais permet de corriger l'affichage suivant
 
-```{r pressure, echo=FALSE, fig.cap="Probleme coordonnees DROM", out.width = '50%'}
-knitr::include_graphics("doc_projet/problème_emplacement_drom.PNG")
+```{r probleme drom, echo=FALSE, fig.cap="Probleme coordonnees DROM", out.width = '50%'}
+knitr::include_graphics("doc_projet/probleme_emplacement_drom.PNG")
 ```
 
 Pour les autres établissements de France métropolitaine, la projection utilisée étaient cele de Lambert II étendu au lieu d'une Lambert 93 comme indique sur le site georisque. Une fois cela compris il a suffit de transformer le système de coordonnees en WGS et de combinais les 3 jeux ainsi créés
@@ -648,7 +648,7 @@ saveRDS(all_SPDF, "Entrepot/SpatialPointsDataFrame_All_Etablissement.rds")
 
 Après compilation on obtient le shema d'entrepot suivant :
 
-```{r pressure, echo=FALSE, fig.cap="Enrepot de données", out.width = '75%'}
+```{r shema entrepot, echo=FALSE, fig.cap="Enrepot de données", out.width = '75%'}
 knitr::include_graphics("doc_projet/Capture.PNG")
 ```
 
@@ -664,7 +664,7 @@ gc()
 
 all_SPDF <- readRDS("Entrepot/SpatialPointsDataFrame_All_Etablissement.rds")
 Analyses <- readRDS("Entrepot/Analyses.rds")
-polluant_et_pesticide <- readRDS("Entrepot/polluant_et_pesticide.rds")
+polluant_et_pesticide <- readRDS("Entrepot/polluant_et_pesticide.rds") %>% unique()
 DROM <- c("MAYOTTE","MARTINIQUE","REUNION","GUADELOUPE","GUYANE")
 
 region <- unique(all_SPDF$Region) %>% sort
@@ -678,30 +678,38 @@ milieu <- unique(polluant_et_pesticide$Milieu) %>% sort
 
 Il est possible de selection la region à gauche, l'année et le type de polluant/pesticide
 
-```{r shiny}
+```{r shiny, echo=FALSE}
 shinyApp(
   
   ui <- fluidPage(
-    sidebarLayout(
-      sidebarPanel(
-                    selectInput("annee", h5("Quelle Annee ?"), 
-                                choices = annee),
-                    selectInput("region", h5("Quelle Region ?"), 
-                                choices = region,
-                                selected = "Reunion"),
-                    selectInput("type", h5("Cause de pollution ?"), 
-                                choices = type,
-                                selected = "Emissions de Polluant"),
-                    selectInput("polluant", h5("Choisissez un type de polluant/Dechet/Pesticide"), 
-                                choices = "Tous"
-                                
-                    )
-    
+    fluidRow(
+      column(3,
+             selectInput("annee", h5("Quelle Annee ?"), 
+                         choices = annee)
       ),
-      mainPanel(
-        leafletOutput("map_pol")
+      column(3,
+             
+             selectInput("region", h5("Quelle Region ?"), 
+                         choices = region,
+                         selected = "Reunion")
+      ),
+      column(3,
+             selectInput("type", h5("Cause de pollution ?"), 
+                         choices = type,
+                         selected = "Emissions de Polluant")
+      ),
+      column(3,
+             selectInput("polluant", h5("Choisissez un type de polluant/Dechet/Pesticide"), 
+                         choices = "Tous"
+                         
+             )
       )
-    )
+      
+    ),
+    
+    leafletOutput("map_pol", height = 800)
+    
+    
   )
   ,
   
@@ -734,7 +742,7 @@ shinyApp(
         c(.)
       
       df2 <- polluant_et_pesticide %>% filter(Id_Polluant %in% id_pol)
-
+      
       
       lab_selected <- df2 %>% mutate(
         lab = paste(Id_Polluant, Polluant_Dechet)
@@ -798,7 +806,7 @@ shinyApp(
       }
     })
     
-
+    
     
   }
   
@@ -809,14 +817,23 @@ shinyApp(
 
 
 
-#Analyse statistique
+# Analyse statistique
 
 Nous allons nous intéressé à la correlation entre l'exposition à l'emission de polluant et la survenue de la maladie X en France métropolitaine en 2016, et ce pour chacun des types de polluants
 
 Tout d'abord, représentont la répartition des établissements émetteurs de polluant en fonction de la répartition de la maladie sur le territoire. Pour cela nous allons d'abord chargé les effectifs par departements, de la france entière ainsi que de la maladie X puis standardise ce dernier.
 
+```{r library pour analyse stat, include=FALSE}
+library(epitools)
+library(cartography)
+library(DCluster)
+```
 
-```{r analyse statistique}
+
+
+```{r analyse statistique,message=FALSE}
+
+
 effectif_france <- read_delim("Sources/effectif.france.csv", ";", escape_double = FALSE, trim_ws = TRUE) # Nous importons la repartitions de l'effectif français en fonction du sexe et de l'âge
 
 effectif_departement <- read_delim("Sources/effectif.departement.csv", ";", escape_double = FALSE, trim_ws = TRUE) # Nous importons la repartitions de l'effectif pour chaque departement en fonction du sexe et de l'âge
@@ -872,9 +889,7 @@ Et nous récupérons la liste des polluant concernés, et on regarde la répartt
 
 
 ```{r}
-library(epitools)
-library(cartography)
-library(DCluster)
+
 
 ana2016<- Analyses %>% 
   filter(Annee == 2016,
@@ -1007,8 +1022,8 @@ id_pol_list[[i]] <- data.frame(Polluant = id_pol[i], t0 = st_test[1], P_value = 
 
 df_id_pol <- data.table::rbindlist(id_pol_list)
 
-
-kable(df_id_pol, caption = "Tableau recapitulatif des résultat de test de Stone")
+df_id_pol %>% arrange(t0) %>% 
+kable(caption = "Tableau recapitulatif des résultat de test de Stone")
 ```
 
 
