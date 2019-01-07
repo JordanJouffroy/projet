@@ -639,7 +639,7 @@ proj4string(spetablissement_DROM) <- CRS("+proj=longlat +ellps=WGS84") #pas de t
 
 
 all_SPDF <- rbind(spetablissement2, spstation2, spetablissement_DROM) 
-all_SPDF <- cbind(all_SPDF@data,all_SPDF@coords) %>% mutate(Region = str_to_title(Region)) %>% unique()
+all_SPDF <- cbind(all_SPDF@data,all_SPDF@coords) %>% mutate(Region = str_to_title(Region)) %>% unique() %>% mutate(Region = str_replace_all(Region,"[-']"," "))
 
 saveRDS(all_SPDF, "Entrepot/SpatialPointsDataFrame_All_Etablissement.rds")
 
