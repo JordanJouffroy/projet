@@ -694,7 +694,7 @@ shinyApp(
              
              selectInput("region", h5("Quelle Region ?"), 
                          choices = region,
-                         selected = "Reunion")
+                         selected = "Ile De France")
       ),
       column(3,
              selectInput("type", h5("Cause de pollution ?"), 
