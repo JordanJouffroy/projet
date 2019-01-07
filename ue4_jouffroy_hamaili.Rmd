@@ -304,14 +304,14 @@ Analyses <- emission_fusion %>%
   bind_rows(production_Dechet_NonDangeureux_fusion) %>% 
   bind_rows(traitement_Dechet_Dangeureux_fusion) %>% 
   bind_rows(traitement_Dechet_NonDangeureux_fusion) %>% 
-  bind_rows(concentration_pesticide_fusion)
+  bind_rows(concentration_pesticide_fusion) %>% unique()
 
 polluant_et_pesticide <- emission_final %>% 
   bind_rows(production_Dechet_Dangeureux_final) %>% 
   bind_rows(production_Dechet_NonDangeureux_final) %>% 
   bind_rows(traitement_Dechet_Dangeureux_final) %>% 
   bind_rows(traitement_Dechet_NonDangeureux_final) %>% 
-  bind_rows(concentration_pesticide_final)
+  bind_rows(concentration_pesticide_final) %>% unique()
 
 saveRDS( Analyses, "Entrepot/Analyses.rds")
 saveRDS( polluant_et_pesticide, "Entrepot/polluant_et_pesticide.rds")
