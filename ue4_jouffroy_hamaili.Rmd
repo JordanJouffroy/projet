@@ -266,7 +266,7 @@ traitement_Dechet_NonDangeureux_final <- traitement_Dechet_NonDangeureux1 %>%
 ```{r arrangement pesticide}
 concentration_pesticide_list <- vector(mode = "list", length = length(annee_pest))
 for (i in 1:length(annee_pest)){
-  concentration_pesticide_list[[i]] <- read.csv2(paste0("Sources/Pesticide/ma_qp_fm_ttres_pesteso_",annee_pest[i],".csv"), stringsAsFactors = FALSE, sep = ";" ,encoding="UTF-8") %>% mutate(Annee = annee_pest[i])
+  concentration_pesticide_list[[i]] <- read.csv2(paste0("Sources/Pesticide/ma_qp_fm_ttres_pesteso_",annee_pest[i],".csv"), stringsAsFactors = FALSE, sep = ";" ) %>% mutate(Annee = annee_pest[i])
 }
 
 concentration_pesticide <- data.table::rbindlist(concentration_pesticide_list)
@@ -278,7 +278,7 @@ concentration_pesticide_fusion <- concentration_pesticide %>% transmute(
   quantite = MA_MOY %>% as.numeric(),
   correspondance_table = "Concentration en Pesticide")
 
-pesticide <-  read.csv2("Sources/Pesticide/pesticides.csv", stringsAsFactors = FALSE, sep = ";" ,encoding="UTF-8") 
+pesticide <-  read.csv2("Sources/Pesticide/pesticides.csv", stringsAsFactors = FALSE, sep = ";") 
 
 concentration_pesticide_final <- pesticide %>% dplyr::transmute(
   Id_Polluant = as.character(CD_PARAMETRE),
@@ -601,11 +601,11 @@ insee <- read.csv2("Sources/Pesticide/code_postal_insee.csv", stringsAsFactors =
 spstation <- station %>% filter(NUM_DEP != "") %>% transmute(
   Id_Etablissement = CD_STATION,
   Nom_Etablissement = paste("Station de mesure de", stringr::str_to_title(NOM_COM)),
-  Commune = NOM_COM,
+  Commune = ifelse(is.na(NOM_COM), "Non renseigne", NOM_COM),
   longitude = X_FICT_L93,
   latitude = Y_FICT_L93,
-  INSEE_COM = NUM_COM,
-  Adresse = ""
+  INSEE_COM = ifelse(is.na(NUM_COM), "Non renseigne", NUM_COM),
+  Adresse = "Non renseigne"
 ) %>% left_join(
   insee %>% transmute(
     INSEE_COM = as.character(INSEE_COM),
@@ -766,12 +766,12 @@ shinyApp(
           Nom_Etablissement,
           Adresse,
           Code_Postal, Commune, longitude, latitude
-        ) %>% mutate(Polluant = ifelse(quantite == max(quantite), Polluant_Dechet, NA)) %>% 
+        ) %>% mutate(Polluant = ifelse(quantite == max(quantite), Polluant_Dechet, NA)) %>% arrange(Polluant) %>% 
         summarise(
           Nombre_polluant = n(),
           Maximum = max(quantite),
           Unite = first(Unite), 
-          Polluant = max(Polluant)
+          Polluant = first(Polluant)
         )
       
       
