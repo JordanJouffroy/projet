@@ -86,11 +86,10 @@ knitr::include_graphics("doc_projet/Capture.PNG")
 # Cartes interactives
 
 ```{r data managing, include = FALSE}
-set.seed(1234)
-Analyses <- readRDS("Entrepot/Analyses.rds") %>% sample_n(100000)
+
+Analyses <- readRDS("Entrepot/Analyses.rds") 
 all_SPDF <- readRDS("Entrepot/SpatialPointsDataFrame_All_Etablissement.rds") %>% unique()
 polluant_et_pesticide <- readRDS("Entrepot/polluant_et_pesticide.rds") %>% unique()
-DROM <- c("MAYOTTE","MARTINIQUE","REUNION","GUADELOUPE","GUYANE")
 
 region <- unique(all_SPDF$Region) %>% sort
 annee <- unique(Analyses$Annee) %>% sort
@@ -113,7 +112,7 @@ shinyApp(
              
              selectInput("region", h5("Quelle Region ?"), 
                          choices = region,
-                         selected = "Ile-De-France")
+                         selected = "Ile De France")
       ),
       column(3,
              selectInput("type", h5("Cause de pollution ?"), 
