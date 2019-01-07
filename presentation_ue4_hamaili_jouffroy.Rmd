@@ -1,5 +1,5 @@
 ---
-title: "Projet UE4"
+title: "Entrepot et fouille de données"
 author: "Jordan Jouffroy - Tiziri Hamaili"
 date: "7 janvier 2019"
 output: 
@@ -86,6 +86,7 @@ knitr::include_graphics("doc_projet/Capture.PNG")
 # Cartes interactives
 
 ```{r data managing, include = FALSE}
+set.seed(1234)
 Analyses <- readRDS("Entrepot/Analyses.rds") %>% sample_n(100000)
 all_SPDF <- readRDS("Entrepot/SpatialPointsDataFrame_All_Etablissement.rds") %>% unique()
 polluant_et_pesticide <- readRDS("Entrepot/polluant_et_pesticide.rds") %>% unique()
@@ -184,11 +185,12 @@ shinyApp(
           Nom_Etablissement,
           Adresse,
           Code_Postal, Commune, longitude, latitude
-        ) %>% 
+        ) %>% mutate(Polluant = ifelse(quantite == max(quantite), Polluant_Dechet, NA)) %>% 
         summarise(
           Nombre_polluant = n(),
           Maximum = max(quantite),
-          Unite = first(Unite)
+          Unite = first(Unite), 
+          Polluant = max(Polluant)
         )
       
       
@@ -214,6 +216,7 @@ shinyApp(
             map_pol_data()[[1]]$Adresse, "<br/>", 
             map_pol_data()[[1]]$Code_Postal, " ",map_pol_data()[[1]]$Commune, "<br/>", 
             input$type, " : ", map_pol_data()[[1]]$Nombre_polluant, "<br/>",
+            "Polluant principal : ", map_pol_data()[[1]]$Polluant, "<br/>",
             "Maximum : ", map_pol_data()[[1]]$Maximum, " ",map_pol_data()[[1]]$Unite
           ), 
           label = map_pol_data()[[1]]$Nom_Etablissement,
