@@ -639,7 +639,7 @@ proj4string(spetablissement_DROM) <- CRS("+proj=longlat +ellps=WGS84") #pas de t
 
 
 all_SPDF <- rbind(spetablissement2, spstation2, spetablissement_DROM) 
-all_SPDF <- cbind(all_SPDF@data,all_SPDF@coords) %>% mutate(Region = str_to_title(Region))
+all_SPDF <- cbind(all_SPDF@data,all_SPDF@coords) %>% mutate(Region = str_to_title(Region)) %>% unique()
 
 saveRDS(all_SPDF, "Entrepot/SpatialPointsDataFrame_All_Etablissement.rds")
 
@@ -664,7 +664,7 @@ gc()
 
 all_SPDF <- readRDS("Entrepot/SpatialPointsDataFrame_All_Etablissement.rds")
 Analyses <- readRDS("Entrepot/Analyses.rds")
-polluant_et_pesticide <- readRDS("Entrepot/polluant_et_pesticide.rds") %>% unique()
+polluant_et_pesticide <- readRDS("Entrepot/polluant_et_pesticide.rds")
 DROM <- c("MAYOTTE","MARTINIQUE","REUNION","GUADELOUPE","GUYANE")
 
 region <- unique(all_SPDF$Region) %>% sort
