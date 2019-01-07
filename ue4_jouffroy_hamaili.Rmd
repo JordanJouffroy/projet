@@ -965,13 +965,13 @@ df_etab_dep <- df_etab2 %>%
 
 
 region<-which(df_etab2$CODE_DEPT=="75")
-st_stat <- stone.test(Observed~offset(log(Expected + 1)), df_etab_dep, model="poisson", R=99, 
+st_stat <- stone.test(Observed~offset(log(Expected+1)), df_etab_dep, model="poisson", R=99, 
            region=region, lambda=1)
 
 
 ggplot(
   data = df_etab_dep,
-  aes(x = log(Expected + 1))
+  aes(x = log(Expected))
 ) + geom_histogram(bins = 10)
 ```
   
