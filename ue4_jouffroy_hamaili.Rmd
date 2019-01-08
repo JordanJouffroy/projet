@@ -1054,7 +1054,7 @@ for (i in 1: length(id_pol)){
   st_test <- stone.test(Observed~offset(log(Expected +1 )), df_etab_dep, model="poisson", R=99, 
                         region=region, lambda=1) 
   
-  t0 = as.numeric(st_test[1])
+  t0 = round(as.numeric(st_test[1]),2)
   p_value <- sprintf("%.4f",1-pnorm(t0))
   p_value <- ifelse(p_value == "0.0000","<0.0001",p_value)
   
