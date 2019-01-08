@@ -4,13 +4,14 @@ author: "Jordan Jouffroy - Tiziri Hamaili"
 date: "7 janvier 2019"
 output: 
   slidy_presentation:
-    theme: cerulean
     css: temp.css
 runtime: shiny
 ---
 
 
 ```{r library, include = FALSE}
+knitr::opts_chunk$set(message= FALSE, warning=FALSE, echo = FALSE)
+
 
 library(shiny)
 library(shinydashboard)
@@ -18,11 +19,10 @@ library(tidyverse)
 library(leaflet)
 library(sp)
 library(sf)
-library(DT)
 library(knitr)
 library(rmarkdown)
 library(spdplyr)
-library(flextable)
+library(kableExtra)
 
 annee_pol <- 2010:2017
 annee_pest <- 2010:2012
@@ -47,7 +47,7 @@ Avantages :
 Inconvenants:  
 
 - Organisation des informations
-- Coordonnees
+- Coordonnées
 
 
 # Variabilité des Coordonnées
@@ -55,7 +55,7 @@ Inconvenants:
 Importation du type de coordonnées géographique :
 
 - Différence de projection 
-- Georisque : lambert II (mais pas que...)
+- Georisque : Lambert II (mais pas que...)
 - Data Gouv : Lambert 93
 
 Conversion des CRS : WGS84-EPSG4326
@@ -66,13 +66,13 @@ knitr::include_graphics("doc_projet/probleme_emplacement_drom.PNG")
 
 # Entrepot de données
 
-La méthode utilisé pour la construction de notre entrepôt de données au format étoiles (i2bi) est ETL:
+La méthode utilisé pour la construction de notre entrepôt de données au format étoiles (i2b2) est ETL:
 
 - Extract, 
-- Transform , 
+- Transforme , 
 - Load.
 
-Intéret de cette méthode
+Intérêt de cette méthode
 
 - Permet de transférer des données brutes d'un système source, 
 - Préparer la construction de l’ entrepôt de données
@@ -90,6 +90,7 @@ knitr::include_graphics("doc_projet/Capture.PNG")
 Analyses <- readRDS("Entrepot/Analyses.rds") 
 all_SPDF <- readRDS("Entrepot/SpatialPointsDataFrame_All_Etablissement.rds") %>% unique()
 polluant_et_pesticide <- readRDS("Entrepot/polluant_et_pesticide.rds") %>% unique()
+DROM <- c("Mayotte", "Reunion","Guyane","Guadeloupe","Martinique")
 
 region <- unique(all_SPDF$Region) %>% sort
 annee <- unique(Analyses$Annee) %>% sort
@@ -209,14 +210,14 @@ shinyApp(
     output$map_pol <- renderLeaflet(
       leaflet(data = map_pol_data()[[1]]) %>%
         addTiles() %>% 
-        addMarkers(
-          popup = str_c(
-            map_pol_data()[[1]]$Nom_Etablissement, "<br/>", 
-            map_pol_data()[[1]]$Adresse, "<br/>", 
-            map_pol_data()[[1]]$Code_Postal, " ",map_pol_data()[[1]]$Commune, "<br/>", 
-            input$type, " : ", map_pol_data()[[1]]$Nombre_polluant, "<br/>",
-            "Polluant principal : ", map_pol_data()[[1]]$Polluant, "<br/>",
-            "Maximum : ", map_pol_data()[[1]]$Maximum, " ",map_pol_data()[[1]]$Unite
+        addMarkers(lng = map_pol_data()[[1]]$longitude,lat = map_pol_data()[[1]]$latitude,
+                   popup = str_c(
+                     "<b>",map_pol_data()[[1]]$Nom_Etablissement, "</b><br/>", 
+                     map_pol_data()[[1]]$Adresse, "<br/>", 
+                     map_pol_data()[[1]]$Code_Postal, " ",map_pol_data()[[1]]$Commune, "<br/>", 
+                     "<i>",input$type, " : </i>", map_pol_data()[[1]]$Nombre_polluant, "<br/>",
+                     "<i> Polluant principal : </i>", map_pol_data()[[1]]$Polluant, "<br/>",
+                     "<i>Maximum : </i>", map_pol_data()[[1]]$Maximum, " ",map_pol_data()[[1]]$Unite
           ), 
           label = map_pol_data()[[1]]$Nom_Etablissement,
           clusterOptions = markerClusterOptions()
@@ -243,7 +244,7 @@ shinyApp(
 *Analyse de  la corrélation entre l’exposition aux polluants émient par les établissements et la répartition des patients atteints de la maladie X*
 
 - standardisation en fonction de l'age et du sexe
-- repartition des etablissements et de la maladie sur une carte 
+- répartition des établissements et de la maladie sur une carte 
 
 ```{r library pour analyse stat, include=FALSE}
 library(epitools)
@@ -379,21 +380,21 @@ region<-which(df_etab2$CODE_DEPT=="75")
 st_stat <- stone.test(Observed~offset(log(Expected+1)), df_etab_dep, model="poisson", R=99, 
                       region=region, lambda=1)
 
-sign <- ifelse(st_stat[1]>=0.05,"n'est pas significative","est significative")
+sign <- ifelse(1-pnorm(as.numeric(st_stat[1]))>=0.05,"n'est pas significative","est significative")
 ```
 
 # Analyse pour l'ensemble des polluants 
 
-Test de Stone : le risque depend de la distance à la source => rééchantillonage
+Test de Stone : le risque dépend de la distance à la source => rééchantillonage
 
 - Répartition a peu près gaussienne
 
 
 ```{r, echo=FALSE}
-paste0("- Statistique de ",round(st_stat$t0,2)," : la pvalue ", sign)
+result <- paste0("- Statistique de ",round(st_stat$t0,2)," : la pvalue (",sprintf("%.3f",1-pnorm(as.numeric(st_stat[1]))),") ", sign)
 ```
 
-
+`r result`
 
 
 ```{r repartition quantite, echo=FALSE}
@@ -401,7 +402,7 @@ paste0("- Statistique de ",round(st_stat$t0,2)," : la pvalue ", sign)
 ggplot(
   data = df_etab_dep,
   aes(x = log(Expected))
-) + geom_histogram(bins = 10)
+) + geom_histogram(bins = 15) + xlab("Logarithme de l'emission de polluant moyenne par habitant") + ylab("")
 ```
 
 
@@ -448,7 +449,8 @@ for (i in 1: length(id_pol)){
                         region=region, lambda=1) 
   
   t0 = as.numeric(st_test[1])
-  p_value <- ifelse(abs(t0) > 1.96, "<0.05", ">0.05")
+  p_value <- sprintf("%.4f",1-pnorm(t0))
+  p_value <- ifelse(p_value == "0.0000","<0.0001",p_value)
   
   id_pol_list[[i]] <- data.frame(Polluant = id_pol[i], t0 = st_test[1], P_value = p_value)
 }
@@ -462,26 +464,49 @@ pp <- polluant_et_pesticide %>% dplyr::select(Id_Polluant, Nom_Polluant = Pollua
 ```{r resultat, echo=FALSE, fig.align='center', warning=FALSE}
 
 df_id_pol %>% arrange(t0) %>% 
-  slice(1:8) %>% 
+  slice(1:5) %>% 
   left_join(pp, by = c("Polluant" = "Id_Polluant")) %>% 
   unique() %>% dplyr::select(Polluant, Nom_Polluant, everything()) %>% 
   kable(
-    caption = "Tableau recapitulatif des résultat de test de Stone",
+    caption = "Tableau recapitulatif des résultats de test de Stone",
     align = "c", row.names = FALSE
-  )
+  ) %>%
+  kable_styling("striped", full_width = F) %>%
+  row_spec(1:3, bold = T, color = "white", background = "#ADD8E6") %>% 
+  row_spec(4:5, bold = F, color = "black", background = "#FFFFFF")
 ```
-
+  
+  
 
 Conclusion :
 
-- Pas de correlation pour P042, P043 et P044  
+- Pas de corrélation pour P042, P043 et P044  
 - mais pour les autres si
 - Pas significatif globalement : CO2 le plus largement émis
 
-Avec une correction de bonferroni :
 
+# Avec une correction de bonferroni :
+  
+  
+  
+
+```{r bonferroni, results='asis'}
+df_id_pol %>% arrange(t0) %>% filter(P_value %in% c("<0.0001","0.0001","0.0002","0.0003","0.0004","0.0005")) %>% 
+  left_join(pp, by = c("Polluant" = "Id_Polluant")) %>% 
+  unique() %>% dplyr::select(Polluant, Nom_Polluant, everything()) %>% 
+  kable(
+    caption = "Tableau recapitulatif des résultats de test de Stone significatifs avec bonferroni",
+    align = "c", row.names = FALSE
+  ) %>%
+  kable_styling("striped", full_width = F) %>%
+  row_spec(1:3, bold = T, color = "black", background = "#FADD8E6")
+```
+  
+  
+  
 - P value < 0.05/99 soit presque 0.0005
-- t0 > 3.29053
+- t0 > 3.3
 
+# 
 
-# Merci de votre attention
+## Merci de votre attention

@@ -1,10 +1,12 @@
 ---
 title: "Projet UE4"
 author: "Jordan Jouffroy - Tiziri Hamaili"
-date: "18 décembre 2018"
+date: "7 janvier 2019"
 output: 
   html_document:
     theme: cerulean
+    toc: true
+    toc_depth: 2
 editor_options: 
   chunk_output_type: console
 runtime: shiny
@@ -12,9 +14,10 @@ runtime: shiny
 
 # Importation des librairies
 
-Avant de commencer à créer l'entrepot de données, nous importons toutes les libraries (sauf DCluster car elle écrase la fonction select de dplyr) afin d'avoir un visuel conci de celle ci.
+Avant de commencer à créer l’entrepôt de données, nous importons toutes les librairies afin d'avoir un visuel concis de celle ci.
 
-```{r library, include = FALSE}
+```{r library, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(message= FALSE, warning=FALSE)
 
 library(shiny)
 library(shinydashboard)
@@ -22,7 +25,6 @@ library(tidyverse)
 library(leaflet)
 library(sp)
 library(sf)
-library(DT)
 library(knitr)
 library(rmarkdown)
 library(spdplyr)
@@ -36,7 +38,24 @@ annee_pest <- 2010:2012
 
 ## Gestion des polluant et des pesticide
 
-Nous avons choisi comme source de données les polluants de 2010 à 2017 et les pesticides de 2010 à 2012 car elles concernaient des sujets proches et toutes 2 des établissements (de mesure dans un cas et emetteurs dans l'autre). Nous avons donc pour chaque type de pollution, créee une table de polluant et une table qui contient les quantité émise, produite, traité ou mesuré. les types étaient : Emissions de polluant, Production de dechet, traitement de dechet et mesure de pesticide.
+Nous avons choisi comme source de données les polluants de 2010 à 2017 et les pesticides de 2010 à 2012 car elles concernaient des sujets proches et toutes 2 des établissements (de mesure dans un cas et émetteurs dans l'autre). Nous avons donc pour chaque type de pollution, créé une table de polluant et une table qui contient les quantité émise, produite, traité ou mesuré. les types étaient : Emissions de polluant, Production de déchet, traitement de déchet et mesure de pesticide.  
+
+Pour chacune des tables qui va nous permettre de créer notre entrepôt, nous sélectionnons les variables de manière uniforme les variables :
+
+- pour la table centrale : l'identifiant de l'établissement, l'identifiant du polluant, l'année, la quantité et le type de polluant (nom de la table initiale)
+- pour la table des polluant : l'identifiant et le nom du polluant, le milieu d’émission ou la famille du polluant s'il y a, l'unité de mesure et le type de polluant (nom de la table initiale)  
+
+Pour les données issus de georisque, il n'y avait pas d'identifiant clair, nous en avons donc créé nous même :
+
+- Emission de polluant : P et 3 chiffres
+- Production de déchet dangereux : PD et 3 chiffres
+- Production de déchet non dangereux : PND et 3 chiffres
+- Traitement de déchet dangereux : TD et 3 chiffres
+- Traitement de déchet non dangereux : TND et 3 chiffres
+
+Pour celles issus de Data gouv, nous avons repris l'identifiant auquel on a ajouté _PE_ avant
+
+### Emission de polluant
 
 ```{r table polluant}
 
@@ -74,7 +93,7 @@ emission_fusion  <- emission1 %>%
     correspondance_table)
 
 emission_final <- emission1 %>% 
-  select(
+  dplyr::select(
     Id_Polluant = Id_polluant,
     Polluant_Dechet = Polluant,
     Milieu,
@@ -85,6 +104,11 @@ emission_final <- emission1 %>%
 
 ```
 
+### Production et traitement de Dechet
+
+Les productions et traitements de déchet étaient scindées en 2 tables chacune, nous les avons donc traité séparément
+
+#### Production de Dechet Dangeureux
 
 ```{r union tables production dechet dangereux}
 
@@ -129,7 +153,7 @@ production_Dechet_Dangeureux_final <- production_Dechet_Dangeureux1 %>% dplyr::s
 
 
 
-
+#### Production de Dechet Non Dangeureux
 
 ```{r union tables production dechet non dangereux}
 
@@ -175,7 +199,7 @@ production_Dechet_NonDangeureux_final <- production_Dechet_NonDangeureux1 %>%
 
 
 
-
+#### Traitement de Dechet Dangeureux
 
 ```{r union tables traitement dechet dangereux}
 
@@ -220,7 +244,7 @@ traitement_Dechet_Dangeureux_final <- traitement_Dechet_Dangeureux1 %>% dplyr::s
 
 
 
-
+#### Traitement de Dechet Non Dangeureux
 
 ```{r union tables traitement dechet non dangereux}
 trait_non_dang_list <- vector(mode = "list", length = length(annee_pol))
@@ -261,7 +285,7 @@ traitement_Dechet_NonDangeureux_final <- traitement_Dechet_NonDangeureux1 %>%
 
 ```
 
-
+### Mesure de la Concentration des pesticide
 
 ```{r arrangement pesticide}
 concentration_pesticide_list <- vector(mode = "list", length = length(annee_pest))
@@ -273,7 +297,7 @@ concentration_pesticide <- data.table::rbindlist(concentration_pesticide_list)
 
 concentration_pesticide_fusion <- concentration_pesticide %>% transmute(
   Id_Etablissement= as.character(CD_STATION) ,
-  Id_Polluant = as.character(CD_PARAMETRE) ,
+  Id_Polluant = paste0("PE",as.character(CD_PARAMETRE)) ,
   Annee,
   quantite = MA_MOY %>% as.numeric(),
   correspondance_table = "Concentration en Pesticide")
@@ -295,7 +319,7 @@ concentration_pesticide_final <- pesticide %>% dplyr::transmute(
 
 # Compilation des données
 
-Nous avons compilé chacune des 2 tables produites en 2 tables distinctes : **Analyses** qui contient les informations des quantités de chaque établissement et **polluant_et_pesticide** qui contient les informations de chaque type de polluant dont son appelation
+Nous avons compilé chacune des 2 tables produites en 2 tables distinctes : **Analyses** qui contient les informations des quantités de chaque établissement et **polluant_et_pesticide** qui contient les informations de chaque type de polluant dont son appellation et nous les avons sauvegardés au format RDS (plus léger pour github)
 
 ```{r creation table centrale et table polluant}
 
@@ -320,10 +344,10 @@ saveRDS( polluant_et_pesticide, "Entrepot/polluant_et_pesticide.rds")
 ```
 
 
-nous nettoyons en suite l'environnement pour libérer de la place.  
+nous nettoyons ensuite l'environnement pour libérer de la place.  
 
 
-```{r nettoyage 1, include= FALSE}
+```{r nettoyage 1}
 rm(list = ls())
 gc()
 ```
@@ -333,13 +357,13 @@ gc()
 
 Ici un problème s'est posé à nous : ce n'est pas en soit le fait d'avoir 2 sources de données avec des systèmes de coordonnées différentes, mais surtout que dans un cas le système de coordonnées n'étaient pas uniforme pour le même jeu de données mais qu'en plus il contenaient des erreurs.
 
-En effet, si le système de coordonnées pour la base de données des pesticides etaient en Lambert 93 et donc simple à compilé pour la reprséntation géographique, celui des polluants n'étaient pas référencé clairement d'une part, mais différait selon la région et contenait une erreur. Concernant l'erreur, il s'agit de l'établissement avec l'Identifiant 589.00648 en 2017 et 89288528 avant. J'ai pu corriger cette erreur en regardant que dans le document registre des etablissement, la longitude et la latitude étaient des combinaison linéaires des coordonnées x et y. Donc pour cette établissement et ceux de Mayotte, à partir de leur Coordonnées X et Y, j'ai pu retrouver la longitude et la latitude. J'ai utilisé le même raisonnement après avoir testé les projections usuelles pour les DROM avec sp. Pour cela j'ai recherché les coordonnées en WGS84 de quelques établissement pour chaque DROM et j'ai fait un modèle de regression linéaire en fonction de Coordonnees_X et Coordonnees_Y. Cela a une imprecision de quelques kilomètres mais permet de corriger l'affichage suivant
+En effet, si le système de coordonnées pour la base de données des pesticides étaient en Lambert 93 et donc simple à compilé pour la représentation géographique, celui des polluants n'étaient pas référencé clairement d'une part, mais différait selon la région et contenait une erreur. Concernant l'erreur, il s'agit de l'établissement avec l'Identifiant 589.00648 en 2017 et 89288528 avant. J'ai pu corriger cette erreur en regardant que dans le document registre des établissement, la longitude et la latitude étaient des combinaison linéaires des coordonnées x et y. Donc pour cette établissement et ceux de Mayotte, à partir de leur Coordonnées X et Y, j'ai pu retrouver la longitude et la latitude. J'ai utilisé le même raisonnement après avoir testé les projections usuelles pour les DROM avec sp. Pour cela j'ai recherché les coordonnées en WGS84 de quelques établissement pour chaque DROM et j'ai fait un modèle de régression linéaire en fonction de Coordonnees_X et Coordonnees_Y. Cela a une imprécision de quelques kilomètres mais permet de corriger l'affichage suivant
 
 ```{r probleme drom, echo=FALSE, fig.cap="Probleme coordonnees DROM", out.width = '50%'}
 knitr::include_graphics("doc_projet/probleme_emplacement_drom.PNG")
 ```
 
-Pour les autres établissements de France métropolitaine, la projection utilisée étaient cele de Lambert II étendu au lieu d'une Lambert 93 comme indique sur le site georisque. Une fois cela compris il a suffit de transformer le système de coordonnees en WGS et de combinais les 3 jeux ainsi créés
+Pour les autres établissements de France métropolitaine, la projection utilisée étaient celle de Lambert II étendu au lieu d'une Lambert 93 comme indique sur le site georisque. Une fois cela compris, il a suffit de transformer le système de coordonnées en WGS et de combiner les 3 jeux ainsi créés.
 
 
 ```{r gestion coordonnees}
@@ -395,7 +419,7 @@ ggplot(
     y = longitude
   )
 ) +
-  geom_point()
+  geom_point() + labs(title = "Représentation la longitude en fonction de la coordonnées X de Georisque") + xlab("Coordonnées X") + ylab("Longitude")
 
 ggplot(
   data = test_etab,
@@ -404,7 +428,7 @@ ggplot(
     y = latitude
   )
 ) +
-  geom_point()
+  geom_point() + labs(title = "Représentation la latitude en fonction de la coordonnées Y de Georisque") + xlab("Coordonnées Y") + ylab("Latitude")
 
 # donc nous avons rempli la longitude et la latitude de nos établissements à partir du registre lorsqu'elles étaient présentes dans un premier temps
 # et calculer à partir d'une regression linéaire dans le cas contraire
@@ -415,7 +439,7 @@ ggplot(
 
 
 etablissement_test <- etablissement2 %>% 
-  left_join(test_etab %>% select(-coordonnees), by = "Id_Etablissement") 
+  left_join(test_etab %>% dplyr::select(-coordonnees), by = "Id_Etablissement") 
 
 DROM <- c("MAYOTTE","MARTINIQUE","REUNION","GUADELOUPE","GUYANE")
 
@@ -532,7 +556,7 @@ reg_long_mar <- lm(data = etab_mar, longitude ~ Coordonnees_X + Coordonnees_Y)
 
 
 
-test_etab2 <- etablissement_test %>% filter(Annee == 2017) %>% select(Id_Etablissement, Nom_Etablissement, Commune, Adresse, Region, coordonnees_x, Coordonnees_X, coordonnees_y, Coordonnees_Y, longitude, latitude) %>% filter(
+test_etab2 <- etablissement_test %>% filter(Annee == 2017) %>% dplyr::select(Id_Etablissement, Nom_Etablissement, Commune, Adresse, Region, coordonnees_x, Coordonnees_X, coordonnees_y, Coordonnees_Y, longitude, latitude) %>% filter(
   coordonnees_x == Coordonnees_X,
   coordonnees_y == Coordonnees_Y
 ) 
@@ -591,7 +615,7 @@ etablissement_test_DROM2 <- etablissement_test %>% # et on applique chaque modè
       Id_Etablissement %in% c("589.00648","89288528"),
       3.6700109999999313,longitude
     )
-  ) %>% select(Id_Etablissement, Nom_Etablissement, Commune, Adresse, Code_Postal, Region, longitude, latitude) %>% unique() %>% filter(!is.na(latitude))
+  ) %>% dplyr::select(Id_Etablissement, Nom_Etablissement, Commune, Adresse, Code_Postal, Region, longitude, latitude) %>% unique() %>% filter(!is.na(latitude))
 
 
 
@@ -612,7 +636,7 @@ spstation <- station %>% filter(NUM_DEP != "") %>% transmute(
     Code_Postal = Code_postal,
     Region = NOM_REG
   ), by = "INSEE_COM"
-) %>% select(-INSEE_COM)
+) %>% dplyr::select(-INSEE_COM)
 
 
 coordinates(spstation) <- ~ longitude + latitude
@@ -622,7 +646,7 @@ spstation2 <- spTransform(spstation, CRS("+proj=longlat +ellps=WGS84"))
 
 spetablissement <- etablissement2 %>% 
   filter((!Region %in% DROM) & (!Id_Etablissement %in% c("589.00648","89288528"))) %>% 
-  select(-Annee) %>% 
+  dplyr::select(-Annee) %>% 
   rename(
     longitude = Coordonnees_X,
     latitude = Coordonnees_Y
@@ -639,14 +663,16 @@ proj4string(spetablissement_DROM) <- CRS("+proj=longlat +ellps=WGS84") #pas de t
 
 
 all_SPDF <- rbind(spetablissement2, spstation2, spetablissement_DROM) 
-all_SPDF <- cbind(all_SPDF@data,all_SPDF@coords) %>% mutate(Region = str_to_title(Region)) %>% unique() %>% mutate(Region = str_replace_all(Region,"[-']"," "))
+all_SPDF <- cbind(all_SPDF@data,all_SPDF@coords) %>% 
+  mutate(Region = str_to_title(Region),
+         Region = str_replace_all(Region,"[-']"," ")) %>% unique()
 
 saveRDS(all_SPDF, "Entrepot/SpatialPointsDataFrame_All_Etablissement.rds")
 
 ```
 
 
-Après compilation on obtient le shema d'entrepot suivant :
+Après compilation on obtient le schéma d’entrepôt suivant :
 
 ```{r shema entrepot, echo=FALSE, fig.cap="Enrepot de données", out.width = '75%'}
 knitr::include_graphics("doc_projet/Capture.PNG")
@@ -654,10 +680,10 @@ knitr::include_graphics("doc_projet/Capture.PNG")
 
 # Présentation des cartes intéractives avec shiny
 
-l'intégration de l'ensemble de la base de donnée est très lourde, nous avons du donc libérer de l'espace et ne récupérer que les objets de l'entrepot et qui vont être utiles pour les cartes interactives
+l'intégration de l'ensemble de la base de donnée est très lourde, nous avons du donc libérer de l'espace et ne récupérer que les objets de l’entrepôt et qui vont être utiles pour les cartes interactives
 
 
-```{r dataload pour shiny, include=FALSE}
+```{r dataload pour shiny}
 
 rm(list = ls())
 gc()
@@ -665,22 +691,19 @@ gc()
 all_SPDF <- readRDS("Entrepot/SpatialPointsDataFrame_All_Etablissement.rds")
 Analyses <- readRDS("Entrepot/Analyses.rds")
 polluant_et_pesticide <- readRDS("Entrepot/polluant_et_pesticide.rds")
-DROM <- c("MAYOTTE","MARTINIQUE","REUNION","GUADELOUPE","GUYANE")
+DROM <- c("Mayotte", "Reunion","Guyane","Guadeloupe","Martinique")
 
 region <- unique(all_SPDF$Region) %>% sort
 annee <- unique(Analyses$Annee) %>% sort
 type <- unique(Analyses$correspondance_table) %>% sort
-milieu <- unique(polluant_et_pesticide$Milieu) %>% sort
-
 ```
 
 
-
-Il est possible de selectionner la region à gauche, l'année et le type de polluant/pesticide. les polluant proposé sont filtré en fonction des 3 premiers menus. 
-
+Nous avons organiser notre carte interactive de la manière suivant : la sélection des filtres en haut (la région, l'année et le type de polluant/pesticide). les polluant proposés sont filtrés en fonction des 3 premiers menus. Ainsi la carte zoom sur la région concernée et groupe les établissement s'il y en a plusieurs proches. Il est possible de les distingué en cliquant dessus. Enfin, en cliquant sur les établissements, s'affiche le nom des établissement, son adresse, son code postale et la commune, le nombre de polluant/pesticide émis,traité ou mesuré, le polluant/pesticide principal et la quantité correspondante.
 
 
-```{r shiny, echo=FALSE}
+
+```{r shiny}
 shinyApp(
   
   ui <- fluidPage(
@@ -710,7 +733,7 @@ shinyApp(
       
     ),
     
-    leafletOutput("map_pol", height = 800)
+    leafletOutput("map_pol", height = 700)
     
     
   )
@@ -791,17 +814,17 @@ shinyApp(
     output$map_pol <- renderLeaflet(
       leaflet(data = map_pol_data()[[1]]) %>%
         addTiles() %>% 
-        addMarkers(
-          popup = str_c(
-            map_pol_data()[[1]]$Nom_Etablissement, "<br/>", 
-            map_pol_data()[[1]]$Adresse, "<br/>", 
-            map_pol_data()[[1]]$Code_Postal, " ",map_pol_data()[[1]]$Commune, "<br/>", 
-            input$type, " : ", map_pol_data()[[1]]$Nombre_polluant, "<br/>",
-            "Polluant principal : ", map_pol_data()[[1]]$Polluant, "<br/>",
-            "Maximum : ", map_pol_data()[[1]]$Maximum, " ",map_pol_data()[[1]]$Unite
-          ), 
-          label = map_pol_data()[[1]]$Nom_Etablissement,
-          clusterOptions = markerClusterOptions()
+        addMarkers(lng = map_pol_data()[[1]]$longitude,lat = map_pol_data()[[1]]$latitude,
+                   popup = str_c(
+                     "<b>",map_pol_data()[[1]]$Nom_Etablissement, "</b><br/>", 
+                     map_pol_data()[[1]]$Adresse, "<br/>", 
+                     map_pol_data()[[1]]$Code_Postal, " ",map_pol_data()[[1]]$Commune, "<br/>", 
+                     "<i>",input$type, " : </i>", map_pol_data()[[1]]$Nombre_polluant, "<br/>",
+                     "<i> Polluant principal : </i>", map_pol_data()[[1]]$Polluant, "<br/>",
+                     "<i>Maximum : </i>", map_pol_data()[[1]]$Maximum, " ",map_pol_data()[[1]]$Unite
+                   ), 
+                   label = map_pol_data()[[1]]$Nom_Etablissement,
+                   clusterOptions = markerClusterOptions()
         )
     )
     
@@ -813,7 +836,8 @@ shinyApp(
     
     
     
-  }
+  },
+  options = list(height = 1000)
   
 )
 
@@ -822,11 +846,13 @@ shinyApp(
 
 
 
-# Analyse statistique
+# Correlation entre Emission de Polluant et maladie X
 
-Nous allons nous intéressé à la correlation entre l'exposition à l'emission de polluant et la survenue de la maladie X en France métropolitaine en 2016, et ce pour chacun des types de polluants
+Nous allons nous intéresser à la corrélation entre l'exposition à l’émission de polluant et la survenue de la maladie X en France métropolitaine en 2016, et ce pour chacun des types de polluants.
 
-Tout d'abord, représentont la répartition des établissements émetteurs de polluant en fonction de la répartition de la maladie sur le territoire. Pour cela nous allons d'abord chargé les effectifs par departements, de la france entière ainsi que de la maladie X puis standardise ce dernier.
+## Representation graphique
+
+Nous représentons la répartition des établissements émetteurs de polluant en fonction de la répartition de la maladie sur le territoire. Pour cela nous allons d'abord chargé les effectifs par départements, de la France entière ainsi que de la maladie X puis standardise ce dernier.
 
 ```{r library pour analyse stat, include=FALSE}
 library(epitools)
@@ -835,8 +861,9 @@ library(DCluster)
 ```
 
 
+### Repartition standardisé de la maladie X
 
-```{r analyse statistique,message=FALSE}
+```{r analyse statistique}
 
 
 effectif_france <- read_delim("Sources/effectif.france.csv", ";", escape_double = FALSE, trim_ws = TRUE) # Nous importons la repartitions de l'effectif français en fonction du sexe et de l'âge
@@ -881,19 +908,16 @@ effectif_departement_tot <- tibble(NOM_DEPT = str_to_upper(colnames(evenements[,
 
 ```
 
+### Repartition des établissement
 
-Nous filtrons ensuite notre entrepot sur :
+Nous filtrons ensuite notre entrepôt sur :
 
 - l'année 2016,
-- l'emission de polluant,
-- les etablissement concernés en France métropolitaine
-
-Et nous récupérons la liste des polluant concernés, et on regarde la réparttion des etablissement en fonction de celle de la maladie X
+- l’émission de polluant,
+- les établissement concernés en France métropolitaine
 
 
-
-
-```{r}
+```{r carte repartition}
 
 
 ana2016<- Analyses %>% 
@@ -919,6 +943,12 @@ df_etab_coord <- df_etab %>%
 
 #On peut donc représenter cela sur une carte :
 
+```
+
+### Représentation de la carte contenant les établissements et la repéartition de la maladie X
+
+```{r carte}
+
 par(mar = c(0,0,1,0)) 
 choroLayer(dep,
            var = 'ratio',
@@ -939,10 +969,13 @@ layoutLayer(title = "Incidence en 2016 de la maladie X",
 
 ```
 
+## Analyses statistiques
 
-Ainsi on peut regarder s'il y a une correlation entre la moyenne d'emission de polluant par département et la survenue de la maladie. On fait par ailleurs un histogramme pour vérifier la répartition de la quantité de polluant émis par habitant.
+Ainsi on peut regarder s'il y a une corrélation entre la moyenne d’émission de polluant par département et la survenue de la maladie. On fait par ailleurs un histogramme pour vérifier la répartition de la quantité de polluant émis par habitant.
 
-```{r}
+### Analyses toute Emission de polluant confondus
+
+```{r analyse globale}
 
 df_etab2 <- df_etab %>% group_by(CODE_DEPT) %>% summarise(
   mean_quant = mean(quantite, na.rm = TRUE) #On récupère la moyenne de polluant emis
@@ -954,7 +987,7 @@ df_etab2 <- df_etab %>% group_by(CODE_DEPT) %>% summarise(
 
 df_etab_dep <- df_etab2 %>% 
   left_join(
-  effectif_departement_tot
+    effectif_departement_tot
   ) %>% 
   transmute( #On récupère uniquement les données utilisées dans le test de stone
     Observed = ratio,
@@ -966,63 +999,67 @@ df_etab_dep <- df_etab2 %>%
 
 region<-which(df_etab2$CODE_DEPT=="75")
 st_stat <- stone.test(Observed~offset(log(Expected+1)), df_etab_dep, model="poisson", R=99, 
-           region=region, lambda=1)
+                      region=region, lambda=1)
 
 
 ggplot(
   data = df_etab_dep,
   aes(x = log(Expected))
-) + geom_histogram(bins = 10)
+) + geom_histogram(bins = 15) + xlab("Logarithme de l'emission de polluant moyenne par habitant") + ylab("")
 ```
-  
-On voit donc que la répartition du logarithme de la quantité émise par habitant est à peu près gaussienne. Cependant avec une statistique de `r st_stat[1]` la pvalue n'est pas significative. Il n'y a donc pas de correlation entre la quantité de polluant emis et la répartition de la maladie X au sein des départements en 2016
 
-Puis on boucle sur les polluants afin de faire un test de stone pour chacun.
+On voit donc que la répartition du logarithme de la quantité émise par habitant est à peu près gaussienne. Cependant avec une statistique de `r st_stat[1]` la pvalue  de `r sprintf("%.3f",1-pnorm(as.numeric(st_stat[1])))` n'est pas significative. Il n'y a donc pas de corrélation entre la quantité de polluant émis et la répartition de la maladie X au sein des départements en 2016
 
-```{r}
+### Analyse polluant par polluant
+
+Puis on boucle sur les polluants afin de faire un test de stone pour chacun. Nous récupérons alors la statistique de test et nous regardons la p value associée à l'aide de la fonction `pnorm`. Nous réunissons tout cela sous forme de tableau dont nous affichons les premières lignes.
+
+```{r analyse par polluant}
 id_pol_list <- vector(mode = "list", length = length(id_pol))
 
 for (i in 1: length(id_pol)){
-prov <- df_etab %>% 
-  filter(Id_Polluant == id_pol[i])  %>% group_by(CODE_DEPT) %>% #On groupe par département
-  summarise(
-  mean_quant = mean(quantite, na.rm = TRUE) # On récupère la quantité moyenne de polluant émise dans le départements
-) 
-
-prov2 <- prov %>% 
-  full_join(dep %>% transmute(
-  CODE_DEPT = CODE_DEPT %>% as.character, 
-  NOM_DEPT = NOM_DEPT %>% as.character, 
-  ratio, X_CENTROID, 
-  Y_CENTROID
-  ), by = "CODE_DEPT" ) %>% mutate(
-  NOM_DEPT = NOM_DEPT %>% str_replace_all("[' ]","-")
-)
-
-
-df_etab_dep <- prov2 %>% 
-  left_join(
-  effectif_departement_tot, by = "NOM_DEPT"
-  ) %>% 
-  transmute(
-    Observed = ratio,
-    Expected = mean_quant/effectif,
-    x = X_CENTROID %>% as.numeric(),
-    y = Y_CENTROID %>% as.numeric()
+  prov <- df_etab %>% 
+    filter(Id_Polluant == id_pol[i])  %>% group_by(CODE_DEPT) %>% #On groupe par département
+    summarise(
+      mean_quant = mean(quantite, na.rm = TRUE) # On récupère la quantité moyenne de polluant émise dans le départements
+    ) 
+  
+  prov2 <- prov %>% 
+    full_join(dep %>% transmute(
+      CODE_DEPT = CODE_DEPT %>% as.character, 
+      NOM_DEPT = NOM_DEPT %>% as.character, 
+      ratio, X_CENTROID, 
+      Y_CENTROID
+    ), by = "CODE_DEPT" ) %>% mutate(
+      NOM_DEPT = NOM_DEPT %>% str_replace_all("[' ]","-")
+    )
+  
+  
+  df_etab_dep <- prov2 %>% 
+    left_join(
+      effectif_departement_tot, by = "NOM_DEPT"
+    ) %>% 
+    transmute(
+      Observed = ratio,
+      Expected = mean_quant/effectif,
+      x = X_CENTROID %>% as.numeric(),
+      y = Y_CENTROID %>% as.numeric()
     ) %>% transmute(
       Observed, x, y,
       Expected = ifelse(is.na(Expected),0,Expected)) %>% filter(!is.na(Expected) & !is.na(Observed))
-
-
-
-region<-which(prov2$CODE_DEPT=="75")
-st_test <- stone.test(Observed~offset(log(Expected +1 )), df_etab_dep, model="poisson", R=99, 
-           region=region, lambda=1) 
-
-t0 = as.numeric(st_test[1])
-p_value <- ifelse(abs(t0) > 1.96, "<0.05", ">0.05")
-
-id_pol_list[[i]] <- data.frame(Polluant = id_pol[i], t0 = st_test[1], P_value = p_value)
+  
+  
+  
+  region<-which(prov2$CODE_DEPT=="75")
+  st_test <- stone.test(Observed~offset(log(Expected +1 )), df_etab_dep, model="poisson", R=99, 
+                        region=region, lambda=1) 
+  
+  t0 = as.numeric(st_test[1])
+  p_value <- sprintf("%.4f",1-pnorm(t0))
+  p_value <- ifelse(p_value == "0.0000","<0.0001",p_value)
+  
+  
+  id_pol_list[[i]] <- data.frame(Polluant = id_pol[i], t0 = st_test[1], P_value = p_value)
 }
 
 df_id_pol <- data.table::rbindlist(id_pol_list)
@@ -1031,7 +1068,7 @@ pp <- polluant_et_pesticide %>% dplyr::select(Id_Polluant, Nom_Polluant = Pollua
 
 ```
 
-```{r resultat, echo=FALSE, fig.align='center', warning=FALSE}
+```{r resultat, echo=FALSE, fig.align='center'}
 
 df_id_pol %>% arrange(t0) %>% 
   slice(1:10) %>% 
@@ -1040,11 +1077,26 @@ df_id_pol %>% arrange(t0) %>%
   kable(
     caption = "Tableau recapitulatif des résultat de test de Stone",
     align = "c", row.names = FALSE
-  )
+  ) %>% kableExtra::kable_styling(full_width = F, position = 'center') %>% 
+  kableExtra::column_spec(4, bold = T)
 ```
 
 
-Ainsi on peut voir que hormis pour P042, P043 et P044 il y a une correlation entre l'emission de polluant et l'incidence de la maladie au sein de la population de France Metropolitaine. il aurait été préférable de regarder la pvalue après correction de bonferroni, et donc en prenant une p value < 0.05/99 soit presque 0.0005
+Ainsi on peut voir que hormis pour P042, P043 et P044 (qui correspond à Emission de carbone), la P value de la corrélation entre l’émission de polluant et l'incidence de la maladie au sein de la population de France Métropolitaine est inférieur à 0.05. Cette différence entre analyse globale non significative à un seuil de 0.05 et analyse individuelle majoritairement significative peut s'expliquer car CO~2~ est le principale polluant en France et notamment en île de France où la maladie est peu présente.
+
+Nous avons affiché 4 chiffres après la virgule pour la P value car en prenant en compte une correction de bonferroni, pour une significativité, il faut considéré une p value < 0.05/99 soit presque 0.0005. Dans ce cas, beaucoup moins de polluants sont significativement associés avec l'incidence de la maladie X.
+
+```{r bonferroni}
+df_id_pol %>% arrange(t0) %>% filter(P_value %in% c("<0.0001","0.0001","0.0002","0.0003","0.0004","0.0005")) %>% 
+  left_join(pp, by = c("Polluant" = "Id_Polluant")) %>% 
+  unique() %>% dplyr::select(Polluant, Nom_Polluant, everything()) %>% 
+  kable(
+    caption = "Tableau recapitulatif des résultats de test de Stone significatifs avec bonferroni",
+    align = "c", row.names = FALSE
+  ) %>% kableExtra::kable_styling(full_width = F, position = 'center') %>% 
+  kableExtra::column_spec(4, bold = T)
+```
+
 
 
 
