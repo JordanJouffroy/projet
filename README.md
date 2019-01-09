@@ -2,7 +2,7 @@
 
 Auteurs : Jouffroy Jordan et Hamaili Tiziri
 
-1. Choix des jeux de données: Les polluants par établissement de Georisque et pesticide eaux souterraines, pourquoi?
+1. Choix des jeux de données: Les polluants par établissement de Georisque et pesticide eaux souterraines
 
 - Avantages :  
     - Riche en information
@@ -15,7 +15,7 @@ Auteurs : Jouffroy Jordan et Hamaili Tiziri
 
 3. Analyses statistiques spatiale :
 
-Nous avons choisis de voir le lien entre la la maladie X en 2016 et les emissions de polluants, car nous n'avions pas de données pour les pesticides après 2012
+Nous avons choisis de voir le lien entre la maladie X en 2016 et les emissions de polluants, car nous n'avions pas de données pour les pesticides après 2012
 
 - Pas de corrélation avec l'emission globale de pesticide
 - mais une correlation significative avec une p value < 0.05 avec de nombreux polluants
