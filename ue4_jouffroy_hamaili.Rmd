@@ -6,7 +6,9 @@ output:
   html_document:
     theme: cerulean
     toc: true
-    toc_depth: 2
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
 editor_options: 
   chunk_output_type: console
 runtime: shiny
@@ -300,7 +302,7 @@ concentration_pesticide_fusion <- concentration_pesticide %>% transmute(
   Id_Polluant = paste0("PE",as.character(CD_PARAMETRE)) ,
   Annee,
   quantite = MA_MOY %>% as.numeric(),
-  correspondance_table = "Concentration en Pesticide")
+  correspondance_table = "Mesure de Pesticide")
 
 pesticide <-  read.csv2("Sources/Pesticide/pesticides.csv", stringsAsFactors = FALSE, sep = ";") 
 
@@ -309,7 +311,7 @@ concentration_pesticide_final <- pesticide %>% dplyr::transmute(
   Polluant_Dechet = LB_PARAMETRE,
   CODE_FAMILLE,
   Unite = "µg/l",
-  correspondance_table = "Concentration en Pesticide"
+  correspondance_table = "Mesure de Pesticide"
 )
 
 
@@ -317,7 +319,7 @@ concentration_pesticide_final <- pesticide %>% dplyr::transmute(
 
 
 
-# Compilation des données
+## Compilation des données
 
 Nous avons compilé chacune des 2 tables produites en 2 tables distinctes : **Analyses** qui contient les informations des quantités de chaque établissement et **polluant_et_pesticide** qui contient les informations de chaque type de polluant dont son appellation et nous les avons sauvegardés au format RDS (plus léger pour github)
 
@@ -908,7 +910,7 @@ effectif_departement_tot <- tibble(NOM_DEPT = str_to_upper(colnames(evenements[,
 
 ```
 
-### Repartition des établissement
+### Répartition des établissement
 
 Nous filtrons ensuite notre entrepôt sur :
 
@@ -945,7 +947,7 @@ df_etab_coord <- df_etab %>%
 
 ```
 
-### Représentation de la carte contenant les établissements et la repéartition de la maladie X
+### Représentation de la carte contenant les établissements et la répartition de la maladie X
 
 ```{r carte}
 
@@ -1012,7 +1014,7 @@ On voit donc que la répartition du logarithme de la quantité émise par habita
 
 ### Analyse polluant par polluant
 
-Puis on boucle sur les polluants afin de faire un test de stone pour chacun. Nous récupérons alors la statistique de test et nous regardons la p value associée à l'aide de la fonction `pnorm`. Nous réunissons tout cela sous forme de tableau dont nous affichons les premières lignes.
+Puis on boucle sur les polluants afin de faire un test de Stone pour chacun. Nous récupérons alors la statistique de test et nous regardons la p value associée à l'aide de la fonction `pnorm`. Nous réunissons tout cela sous forme de tableau dont nous affichons les premières lignes.
 
 ```{r analyse par polluant}
 id_pol_list <- vector(mode = "list", length = length(id_pol))
@@ -1075,7 +1077,7 @@ df_id_pol %>% arrange(t0) %>%
   left_join(pp, by = c("Polluant" = "Id_Polluant")) %>% 
   unique() %>% dplyr::select(Polluant, Nom_Polluant, everything()) %>% 
   kable(
-    caption = "Tableau recapitulatif des résultat de test de Stone",
+    caption = "Tableau recapitulatif des 10 résultats de test de Stone les moins significatifs",
     align = "c", row.names = FALSE
   ) %>% kableExtra::kable_styling(full_width = F, position = 'center') %>% 
   kableExtra::column_spec(4, bold = T)
