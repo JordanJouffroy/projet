@@ -307,7 +307,7 @@ concentration_pesticide_fusion <- concentration_pesticide %>% transmute(
 pesticide <-  read.csv2("Sources/Pesticide/pesticides.csv", stringsAsFactors = FALSE, sep = ";") 
 
 concentration_pesticide_final <- pesticide %>% dplyr::transmute(
-  Id_Polluant = as.character(CD_PARAMETRE),
+  Id_Polluant = paste0("PE",as.character(CD_PARAMETRE)),
   Polluant_Dechet = LB_PARAMETRE,
   CODE_FAMILLE,
   Unite = "µg/l",
@@ -669,6 +669,8 @@ all_SPDF <- cbind(all_SPDF@data,all_SPDF@coords) %>%
   mutate(Region = str_to_title(Region),
          Region = str_replace_all(Region,"[-']"," ")) %>% unique()
 
+all_SPDF <- all_SPDF[!duplicated(all_SPDF$Id_Etablissement, all_SPDF$longitude, all_SPDF$latitude),]
+
 saveRDS(all_SPDF, "Entrepot/SpatialPointsDataFrame_All_Etablissement.rds")
 
 ```
@@ -863,7 +865,7 @@ library(DCluster)
 ```
 
 
-### Repartition standardisé de la maladie X
+### Répartition standardisé de la maladie X
 
 ```{r analyse statistique}
 
@@ -947,7 +949,7 @@ df_etab_coord <- df_etab %>%
 
 ```
 
-### Représentation de la carte contenant les établissements et la répartition de la maladie X
+### Représentation de la carte contenant les établissements et la repéartition de la maladie X
 
 ```{r carte}
 
@@ -1014,7 +1016,7 @@ On voit donc que la répartition du logarithme de la quantité émise par habita
 
 ### Analyse polluant par polluant
 
-Puis on boucle sur les polluants afin de faire un test de Stone pour chacun. Nous récupérons alors la statistique de test et nous regardons la p value associée à l'aide de la fonction `pnorm`. Nous réunissons tout cela sous forme de tableau dont nous affichons les premières lignes.
+Puis on boucle sur les polluants afin de faire un test de stone pour chacun. Nous récupérons alors la statistique de test et nous regardons la p value associée à l'aide de la fonction `pnorm`. Nous réunissons tout cela sous forme de tableau dont nous affichons les premières lignes.
 
 ```{r analyse par polluant}
 id_pol_list <- vector(mode = "list", length = length(id_pol))
